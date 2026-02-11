@@ -1,355 +1,350 @@
-import React, { useState, useEffect } from 'react';
-import { CheckCircle2, XCircle, ChevronRight, ChevronLeft, RefreshCcw, Award, BookOpen } from 'lucide-react';
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DENT 545 • Quiz: Model Selection (Chapter 6)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #007C41; }
+  </style>
+</head>
 
-const QuizApp = () => {
-  const [currentSlide, setCurrentSlide] = useState('welcome'); // welcome, quiz, results, review
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [userAnswers, setUserAnswers] = useState({});
-  const [score, setScore] = useState(0);
+<body class="min-h-screen bg-slate-100 flex items-center justify-center p-4 font-sans text-slate-800">
+  <div class="max-w-3xl w-full bg-white rounded-lg shadow-xl overflow-hidden border-b-8 border-[#FFDB05]">
 
-  const questions = [
-    {
-      id: 1,
-      type: "multiple",
-      question: "In the context of linear regression, what is the primary risk of including too many predictors in a model when the sample size (n) is small?",
-      options: ["Increased bias", "Overfitting and high variance", "Underfitting", "Computational simplicity"],
-      answer: 1,
-      explanation: "Too many predictors relative to observations leads the model to 'memorize' noise, resulting in high variance and overfitting."
-    },
-    {
-      id: 2,
-      type: "multiple",
-      question: "If a clinical researcher is using 20 different word-features from dental notes to predict patient risk, how many total models must be evaluated using Best Subset Selection?",
-      options: ["20", "400", "2^20 (1,048,576)", "20!"],
-      answer: 2,
-      explanation: "Best subset selection evaluates every possible combination, which is 2^p models."
-    },
-    {
-      id: 3,
-      type: "multiple",
-      question: "Under what specific condition is Backward Stepwise Selection impossible to perform?",
-      options: ["When p > n", "When all predictors are highly correlated", "When the response variable is categorical", "When λ is set to zero"],
-      answer: 0,
-      explanation: "Backward selection requires starting with the full model, which cannot be uniquely fit using OLS if p > n."
-    },
-    {
-      id: 4,
-      type: "multiple",
-      question: "Why is training error (RSS) an unreliable metric for choosing the 'best' model size?",
-      options: ["It always increases as you add more predictors", "It remains constant regardless of model size", "It always decreases as you add more predictors", "It is only valid for Ridge regression"],
-      answer: 2,
-      explanation: "RSS and R² will always improve (or stay the same) on training data as you add variables, regardless of their true relevance."
-    },
-    {
-      id: 5,
-      type: "multiple",
-      question: "Which of the following metrics is specifically designed to 'penalize' model complexity to help estimate test error?",
-      options: ["R²", "Training RSS", "BIC (Bayesian Information Criterion)", "Maximum Likelihood Estimate"],
-      answer: 2,
-      explanation: "Information criteria like AIC and BIC add a penalty term for the number of parameters to counteract the drop in training RSS."
-    },
-    {
-      id: 6,
-      type: "multiple",
-      question: "Shrinkage methods (Regularization) improve a model's performance primarily by:",
-      options: ["Increasing variance to reduce bias", "Setting the intercept to zero", "Reducing variance at the cost of a small increase in bias", "Increasing the sample size n"],
-      answer: 2,
-      explanation: "This is the classic bias-variance tradeoff: we accept a little bias to significantly drop the high variance of OLS."
-    },
-    {
-      id: 7,
-      type: "multiple",
-      question: "Which statement about Ridge Regression is TRUE?",
-      options: ["It can set coefficients exactly to zero", "It uses an L1 penalty", "It shrinks coefficients toward zero but keeps all p predictors", "It is more interpretable than the Lasso"],
-      answer: 2,
-      explanation: "Ridge uses an L2 penalty which never forces coefficients to be exactly zero, unlike the Lasso."
-    },
-    {
-      id: 8,
-      type: "multiple",
-      question: "The Lasso is often preferred over Ridge regression when:",
-      options: ["Every predictor has a small, non-zero effect", "We want a sparse model with automatic variable selection", "p is much smaller than n", "Computational power is unlimited"],
-      answer: 1,
-      explanation: "The Lasso's L1 penalty performs variable selection by forcing some coefficients to zero, resulting in sparse, interpretable models."
-    },
-    {
-      id: 9,
-      type: "multiple",
-      question: "In both Ridge and Lasso, what happens to the model as the tuning parameter λ approaches infinity?",
-      options: ["The model becomes identical to OLS", "All coefficient estimates approach zero", "The variance increases", "The bias decreases"],
-      answer: 1,
-      explanation: "As λ increases, the penalty for non-zero coefficients becomes infinite, forcing all estimates toward zero."
-    },
-    {
-      id: 10,
-      type: "multiple",
-      question: "What is the fundamental difference between PCR and PLS?",
-      options: ["PCR is supervised; PLS is unsupervised", "PCR is unsupervised; PLS is supervised (uses Y)", "PCR uses L1; PLS uses L2", "PCR only works when p > n"],
-      answer: 1,
-      explanation: "PCR finds components based only on X variance; PLS actively looks for components that explain variance in Y."
-    },
-    {
-      id: 11,
-      type: "multiple",
-      question: "In Dimension Reduction, if we use M components where M = p, the model is equivalent to:",
-      options: ["The Lasso", "Ridge Regression", "Ordinary Least Squares (OLS)", "A null model"],
-      answer: 2,
-      explanation: "If you use the full set of principal components, you are just performing a rotation of the original coordinate system, making it equivalent to OLS."
-    },
-    {
-      id: 12,
-      type: "multiple",
-      question: "In a clinical setting with 1,000 word features but only 100 patient records, why does OLS fail?",
-      options: ["Model always underfits", "Training RSS will be extremely high", "Model fits training data perfectly but test error collapses", "Standard errors cannot be calculated for Ridge"],
-      answer: 2,
-      explanation: "With p > n, OLS can find a hyperplane that passes through every data point perfectly, resulting in 0 training error but no predictive power."
-    },
-    {
-      id: 13,
-      type: "multiple",
-      question: "If you have two highly correlated features and apply Lasso, what is likely to happen?",
-      options: ["Both stay in with equal weights", "Both are removed", "One is likely kept while the other is set to zero", "The model fails to converge"],
-      answer: 2,
-      explanation: "The Lasso tends to pick one variable from a group of correlated predictors and ignore the others (sparsity)."
-    },
-    {
-      id: 14,
-      type: "multiple",
-      question: "Why might the 'Validation Set Approach' yield different results across multiple runs?",
-      options: ["Different random splits of data", "Changing model complexity", "L1 vs L2 penalties", "The tuning parameter λ varies"],
-      answer: 0,
-      explanation: "Since the data is split randomly into training and validation sets, the specific observations in each set vary per run."
-    },
-    {
-      id: 15,
-      type: "multiple",
-      question: "If Model A has R²=0.95 (50 predictors) and Model B has R²=0.90 (5 predictors), but Model B has lower CV error, which is better?",
-      options: ["Model A", "Model B", "They are equal", "Cannot be determined"],
-      answer: 1,
-      explanation: "CV error estimates test performance. Lower CV error means Model B generalizes better, despite lower training R²."
-    }
-  ];
+    <!-- Header -->
+    <div class="bg-[#007C41] p-6 flex justify-between items-center text-white">
+      <div>
+        <h2 class="text-xl font-bold tracking-tight">UNIVERSITY OF ALBERTA</h2>
+        <p class="text-xs uppercase tracking-widest opacity-80">Statistical Learning • Chapter 6</p>
+      </div>
+      <div class="opacity-60">
+        <!-- simple icon -->
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+          <path d="M4 4.5A2.5 2.5 0 0 1 6.5 7H20" />
+          <path d="M6.5 7v10" />
+          <path d="M20 7v10" />
+        </svg>
+      </div>
+    </div>
 
-  const handleAnswerSelection = (optionIndex) => {
-    setUserAnswers({ ...userAnswers, [currentQuestionIndex]: optionIndex });
-  };
+    <!-- Slides container -->
+    <div id="slide-welcome" class="p-12 text-center">
+      <h1 class="text-4xl font-extrabold text-[#007C41] mb-4">Quiz: Model Selection</h1>
+      <p class="text-lg text-slate-600 mb-8 max-w-md mx-auto">
+        Test your knowledge on Linear Model Selection, Shrinkage (Ridge/Lasso), and Dimension Reduction.
+      </p>
+      <button id="btn-start"
+        class="bg-[#007C41] hover:bg-[#005c30] text-white px-10 py-4 rounded-full font-bold text-lg transition-all shadow-md active:scale-95">
+        Start Quiz
+      </button>
+    </div>
 
-  const nextQuestion = () => {
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-    } else {
-      calculateScore();
-      setCurrentSlide('results');
-    }
-  };
-
-  const prevQuestion = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(currentQuestionIndex - 1);
-    }
-  };
-
-  const calculateScore = () => {
-    let s = 0;
-    questions.forEach((q, idx) => {
-      if (userAnswers[idx] === q.answer) s++;
-    });
-    setScore(s);
-  };
-
-  const resetQuiz = () => {
-    setUserAnswers({});
-    setCurrentQuestionIndex(0);
-    setScore(0);
-    setCurrentSlide('welcome');
-  };
-
-  return (
-    <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4 font-sans text-slate-800">
-      <div className="max-w-3xl w-full bg-white rounded-lg shadow-xl overflow-hidden border-b-8 border-[#FFDB05]">
-        
-        {/* Header Bar */}
-        <div className="bg-[#007C41] p-6 flex justify-between items-center text-white">
-          <div>
-            <h2 className="text-xl font-bold tracking-tight">UNIVERSITY OF ALBERTA</h2>
-            <p className="text-xs uppercase tracking-widest opacity-80">Statistical Learning • Chapter 6</p>
-          </div>
-          <BookOpen className="w-8 h-8 opacity-50" />
+    <div id="slide-quiz" class="hidden p-8">
+      <div class="flex justify-between items-center mb-6">
+        <span id="q-counter" class="text-sm font-bold text-slate-400"></span>
+        <div class="w-48 h-2 bg-slate-200 rounded-full overflow-hidden">
+          <div id="progress" class="h-full bg-[#FFDB05] transition-all duration-300" style="width: 0%"></div>
         </div>
-
-        {/* Welcome Slide */}
-        {currentSlide === 'welcome' && (
-          <div className="p-12 text-center">
-            <h1 className="text-4xl font-extrabold text-[#007C41] mb-4">Quiz: Model Selection</h1>
-            <p className="text-lg text-slate-600 mb-8 max-w-md mx-auto">
-              Test your knowledge on Linear Model Selection, Shrinkage (Ridge/Lasso), and Dimension Reduction.
-            </p>
-            <button 
-              onClick={() => setCurrentSlide('quiz')}
-              className="bg-[#007C41] hover:bg-[#005c30] text-white px-10 py-4 rounded-full font-bold text-lg transition-all shadow-md active:scale-95"
-            >
-              Start Quiz
-            </button>
-          </div>
-        )}
-
-        {/* Quiz Slide */}
-        {currentSlide === 'quiz' && (
-          <div className="p-8">
-            <div className="flex justify-between items-center mb-6">
-              <span className="text-sm font-bold text-slate-400">QUESTION {currentQuestionIndex + 1} OF {questions.length}</span>
-              <div className="w-48 h-2 bg-slate-200 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-[#FFDB05] transition-all duration-300" 
-                  style={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}
-                ></div>
-              </div>
-            </div>
-
-            <h3 className="text-2xl font-bold mb-8 text-slate-800 leading-tight">
-              {questions[currentQuestionIndex].question}
-            </h3>
-
-            <div className="space-y-3 mb-10">
-              {questions[currentQuestionIndex].options.map((option, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleAnswerSelection(idx)}
-                  className={`w-full p-4 text-left rounded-lg border-2 transition-all ${
-                    userAnswers[currentQuestionIndex] === idx 
-                    ? 'border-[#007C41] bg-green-50 text-[#007C41] font-bold shadow-sm' 
-                    : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center">
-                    <span className={`w-8 h-8 rounded-full border flex items-center justify-center mr-4 text-sm ${
-                      userAnswers[currentQuestionIndex] === idx ? 'bg-[#007C41] text-white border-transparent' : 'border-slate-300'
-                    }`}>
-                      {String.fromCharCode(65 + idx)}
-                    </span>
-                    {option}
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            <div className="flex justify-between border-top pt-6">
-              <button 
-                onClick={prevQuestion}
-                disabled={currentQuestionIndex === 0}
-                className="flex items-center text-slate-500 font-bold disabled:opacity-30 hover:text-[#007C41]"
-              >
-                <ChevronLeft className="mr-1" /> Previous
-              </button>
-              <button 
-                onClick={nextQuestion}
-                disabled={userAnswers[currentQuestionIndex] === undefined}
-                className="bg-[#007C41] text-white px-8 py-3 rounded-lg font-bold disabled:opacity-50 hover:bg-[#005c30] transition-colors flex items-center"
-              >
-                {currentQuestionIndex === questions.length - 1 ? 'Finish' : 'Next Question'} 
-                <ChevronRight className="ml-1" />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Results Slide */}
-        {currentSlide === 'results' && (
-          <div className="p-12 text-center">
-            <div className="mb-6 flex justify-center">
-              <div className="relative">
-                <svg className="w-32 h-32">
-                  <circle className="text-slate-200" strokeWidth="8" stroke="currentColor" fill="transparent" r="58" cx="64" cy="64" />
-                  <circle 
-                    className="text-[#007C41]" 
-                    strokeWidth="8" 
-                    strokeDasharray={364.4}
-                    strokeDashoffset={364.4 - (364.4 * score) / questions.length}
-                    strokeLinecap="round" 
-                    stroke="currentColor" 
-                    fill="transparent" 
-                    r="58" cx="64" cy="64" 
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-3xl font-extrabold">{score}</span>
-                  <span className="text-xs text-slate-500">OUT OF {questions.length}</span>
-                </div>
-              </div>
-            </div>
-
-            <h2 className="text-3xl font-bold mb-2">Quiz Complete!</h2>
-            <p className="text-slate-500 mb-8">
-              {score === questions.length ? "Mastered it! Excellent understanding of Chapter 6." : 
-               score > (questions.length * 0.7) ? "Great job! You have a solid grasp of selection methods." : 
-               "Keep studying! Review the bias-variance tradeoff and shrinkage logic."}
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button 
-                onClick={() => setCurrentSlide('review')}
-                className="flex items-center justify-center bg-slate-800 text-white px-8 py-3 rounded-lg font-bold hover:bg-slate-700 transition-colors"
-              >
-                <BookOpen className="w-4 h-4 mr-2" /> Review Key
-              </button>
-              <button 
-                onClick={resetQuiz}
-                className="flex items-center justify-center bg-[#FFDB05] text-slate-900 px-8 py-3 rounded-lg font-bold hover:bg-[#ebc904] transition-colors"
-              >
-                <RefreshCcw className="w-4 h-4 mr-2" /> Retake Quiz
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Review Slide */}
-        {currentSlide === 'review' && (
-          <div className="p-8">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-[#007C41]">Answer Key Review</h2>
-              <button onClick={() => setCurrentSlide('results')} className="text-slate-400 hover:text-slate-600">Back to Results</button>
-            </div>
-            
-            <div className="max-h-[400px] overflow-y-auto space-y-6 pr-2 custom-scrollbar">
-              {questions.map((q, idx) => (
-                <div key={idx} className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                  <div className="flex items-start">
-                    {userAnswers[idx] === q.answer ? (
-                      <CheckCircle2 className="w-5 h-5 text-green-600 mt-1 flex-shrink-0 mr-3" />
-                    ) : (
-                      <XCircle className="w-5 h-5 text-red-600 mt-1 flex-shrink-0 mr-3" />
-                    )}
-                    <div>
-                      <p className="font-bold text-slate-800 mb-1">{idx + 1}. {q.question}</p>
-                      <p className="text-sm text-green-700 font-medium">Correct Answer: {q.options[q.answer]}</p>
-                      <p className="text-sm text-slate-500 mt-2 italic">{q.explanation}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-8 text-center border-t pt-6">
-              <button 
-                onClick={resetQuiz}
-                className="bg-[#007C41] text-white px-10 py-3 rounded-lg font-bold hover:bg-[#005c30] transition-colors"
-              >
-                Finish Review
-              </button>
-            </div>
-          </div>
-        )}
-
       </div>
 
-      <style>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #007C41; }
-      `}</style>
-    </div>
-  );
-};
+      <h3 id="q-text" class="text-2xl font-bold mb-8 text-slate-800 leading-tight"></h3>
 
-export default QuizApp;
+      <div id="options" class="space-y-3 mb-10"></div>
+
+      <div class="flex justify-between pt-6 border-t">
+        <button id="btn-prev"
+          class="flex items-center text-slate-500 font-bold disabled:opacity-30 hover:text-[#007C41]">
+          <span class="mr-2">←</span> Previous
+        </button>
+        <button id="btn-next"
+          class="bg-[#007C41] text-white px-8 py-3 rounded-lg font-bold disabled:opacity-50 hover:bg-[#005c30] transition-colors flex items-center">
+          Next Question <span class="ml-2">→</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="slide-results" class="hidden p-12 text-center">
+      <div class="mb-6 flex justify-center">
+        <div class="relative">
+          <svg class="w-32 h-32">
+            <circle class="text-slate-200" stroke-width="8" stroke="currentColor" fill="transparent" r="58" cx="64" cy="64"></circle>
+            <circle id="score-ring" class="text-[#007C41]" stroke-width="8" stroke-linecap="round"
+              stroke="currentColor" fill="transparent" r="58" cx="64" cy="64"></circle>
+          </svg>
+          <div class="absolute inset-0 flex flex-col items-center justify-center">
+            <span id="score-big" class="text-3xl font-extrabold">0</span>
+            <span id="score-outof" class="text-xs text-slate-500"></span>
+          </div>
+        </div>
+      </div>
+
+      <h2 class="text-3xl font-bold mb-2">Quiz Complete!</h2>
+      <p id="score-msg" class="text-slate-500 mb-8"></p>
+
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <button id="btn-review"
+          class="flex items-center justify-center bg-slate-800 text-white px-8 py-3 rounded-lg font-bold hover:bg-slate-700 transition-colors">
+          Review Key
+        </button>
+        <button id="btn-retake"
+          class="flex items-center justify-center bg-[#FFDB05] text-slate-900 px-8 py-3 rounded-lg font-bold hover:bg-[#ebc904] transition-colors">
+          Retake Quiz
+        </button>
+      </div>
+    </div>
+
+    <div id="slide-review" class="hidden p-8">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-[#007C41]">Answer Key Review</h2>
+        <button id="btn-back-results" class="text-slate-400 hover:text-slate-600">Back to Results</button>
+      </div>
+
+      <div id="review-list" class="max-h-[420px] overflow-y-auto space-y-6 pr-2 custom-scrollbar"></div>
+
+      <div class="mt-8 text-center border-t pt-6">
+        <button id="btn-finish"
+          class="bg-[#007C41] text-white px-10 py-3 rounded-lg font-bold hover:bg-[#005c30] transition-colors">
+          Finish Review
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const questions = [
+      { question: "In the context of linear regression, what is the primary risk of including too many predictors in a model when the sample size (n) is small?",
+        options: ["Increased bias", "Overfitting and high variance", "Underfitting", "Computational simplicity"],
+        answer: 1,
+        explanation: "Too many predictors relative to observations leads the model to 'memorize' noise, resulting in high variance and overfitting."
+      },
+      { question: "If a clinical researcher is using 20 different word-features from dental notes to predict patient risk, how many total models must be evaluated using Best Subset Selection?",
+        options: ["20", "400", "2^20 (1,048,576)", "20!"],
+        answer: 2,
+        explanation: "Best subset selection evaluates every possible combination, which is 2^p models."
+      },
+      { question: "Under what specific condition is Backward Stepwise Selection impossible to perform?",
+        options: ["When p > n", "When all predictors are highly correlated", "When the response variable is categorical", "When λ is set to zero"],
+        answer: 0,
+        explanation: "Backward selection requires starting with the full model, which cannot be uniquely fit using OLS if p > n."
+      },
+      { question: "Why is training error (RSS) an unreliable metric for choosing the 'best' model size?",
+        options: ["It always increases as you add more predictors", "It remains constant regardless of model size", "It always decreases as you add more predictors", "It is only valid for Ridge regression"],
+        answer: 2,
+        explanation: "RSS and R² will always improve (or stay the same) on training data as you add variables, regardless of their true relevance."
+      },
+      { question: "Which metric is designed to penalize model complexity to estimate test error?",
+        options: ["R²", "Training RSS", "BIC (Bayesian Information Criterion)", "Maximum Likelihood Estimate"],
+        answer: 2,
+        explanation: "Information criteria like AIC/BIC add a penalty term for the number of parameters to counteract decreasing training RSS."
+      },
+      { question: "Shrinkage (Regularization) improves performance primarily by:",
+        options: ["Increasing variance to reduce bias", "Setting the intercept to zero", "Reducing variance at the cost of a small increase in bias", "Increasing the sample size n"],
+        answer: 2,
+        explanation: "Bias–variance tradeoff: accept a little bias to significantly reduce variance."
+      },
+      { question: "Which statement about Ridge Regression is TRUE?",
+        options: ["It can set coefficients exactly to zero", "It uses an L1 penalty", "It shrinks coefficients toward zero but keeps all predictors", "It is more interpretable than the Lasso"],
+        answer: 2,
+        explanation: "Ridge uses an L2 penalty and does not force coefficients exactly to zero."
+      },
+      { question: "The Lasso is often preferred over Ridge regression when:",
+        options: ["Every predictor has a small, non-zero effect", "We want a sparse model with automatic variable selection", "p is much smaller than n", "Computational power is unlimited"],
+        answer: 1,
+        explanation: "The Lasso’s L1 penalty can force some coefficients to zero (sparse model)."
+      },
+      { question: "In both Ridge and Lasso, what happens as λ → ∞?",
+        options: ["The model becomes identical to OLS", "All coefficient estimates approach zero", "The variance increases", "The bias decreases"],
+        answer: 1,
+        explanation: "As λ increases, the penalty dominates and estimates shrink toward zero."
+      },
+      { question: "What is the fundamental difference between PCR and PLS?",
+        options: ["PCR is supervised; PLS is unsupervised", "PCR is unsupervised; PLS is supervised (uses Y)", "PCR uses L1; PLS uses L2", "PCR only works when p > n"],
+        answer: 1,
+        explanation: "PCR uses only X variance; PLS uses X and Y when forming components."
+      },
+      { question: "In Dimension Reduction, if M = p components are used, the model is equivalent to:",
+        options: ["The Lasso", "Ridge Regression", "Ordinary Least Squares (OLS)", "A null model"],
+        answer: 2,
+        explanation: "Using all components is a rotation of the original features—equivalent to OLS."
+      },
+      { question: "With 1,000 features but only 100 records, why does OLS fail?",
+        options: ["Model always underfits", "Training RSS will be extremely high", "Model fits training perfectly but test error collapses", "Standard errors cannot be calculated for Ridge"],
+        answer: 2,
+        explanation: "With p > n, OLS can achieve ~0 training error but generalizes poorly."
+      },
+      { question: "With two highly correlated predictors, Lasso will likely:",
+        options: ["Keep both with equal weights", "Remove both", "Keep one and set the other to zero", "Fail to converge"],
+        answer: 2,
+        explanation: "Lasso tends to pick one variable from a correlated group (sparsity)."
+      },
+      { question: "Why can the Validation Set Approach give different results across runs?",
+        options: ["Different random splits of data", "Changing model complexity", "L1 vs L2 penalties", "λ varies"],
+        answer: 0,
+        explanation: "Random train/validation splits change which observations land in each set."
+      },
+      { question: "Model A has R²=0.95 (50 predictors). Model B has R²=0.90 (5 predictors) but lower CV error. Which is better?",
+        options: ["Model A", "Model B", "Equal", "Cannot be determined"],
+        answer: 1,
+        explanation: "CV error estimates test performance. Lower CV error implies better generalization."
+      },
+    ];
+
+    const slides = {
+      welcome: document.getElementById('slide-welcome'),
+      quiz: document.getElementById('slide-quiz'),
+      results: document.getElementById('slide-results'),
+      review: document.getElementById('slide-review'),
+    };
+
+    const btnStart = document.getElementById('btn-start');
+    const btnPrev = document.getElementById('btn-prev');
+    const btnNext = document.getElementById('btn-next');
+
+    const qCounter = document.getElementById('q-counter');
+    const qText = document.getElementById('q-text');
+    const optionsEl = document.getElementById('options');
+    const progressEl = document.getElementById('progress');
+
+    const scoreRing = document.getElementById('score-ring');
+    const scoreBig = document.getElementById('score-big');
+    const scoreOutof = document.getElementById('score-outof');
+    const scoreMsg = document.getElementById('score-msg');
+
+    const btnReview = document.getElementById('btn-review');
+    const btnRetake = document.getElementById('btn-retake');
+    const btnBackResults = document.getElementById('btn-back-results');
+    const btnFinish = document.getElementById('btn-finish');
+
+    const reviewList = document.getElementById('review-list');
+
+    let idx = 0;
+    let answers = {}; // idx -> option index
+
+    function show(name) {
+      Object.values(slides).forEach(s => s.classList.add('hidden'));
+      slides[name].classList.remove('hidden');
+    }
+
+    function renderQuestion() {
+      const q = questions[idx];
+      qCounter.textContent = `QUESTION ${idx + 1} OF ${questions.length}`;
+      qText.textContent = q.question;
+      progressEl.style.width = `${((idx + 1) / questions.length) * 100}%`;
+
+      optionsEl.innerHTML = '';
+      q.options.forEach((opt, oi) => {
+        const selected = answers[idx] === oi;
+        const btn = document.createElement('button');
+        btn.className =
+          `w-full p-4 text-left rounded-lg border-2 transition-all ` +
+          (selected
+            ? 'border-[#007C41] bg-green-50 text-[#007C41] font-bold shadow-sm'
+            : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50');
+
+        btn.innerHTML = `
+          <div class="flex items-center">
+            <span class="w-8 h-8 rounded-full border flex items-center justify-center mr-4 text-sm ${selected ? 'bg-[#007C41] text-white border-transparent' : 'border-slate-300'}">
+              ${String.fromCharCode(65 + oi)}
+            </span>
+            <span>${opt}</span>
+          </div>
+        `;
+
+        btn.onclick = () => {
+          answers[idx] = oi;
+          renderQuestion();
+          btnNext.disabled = false;
+        };
+
+        optionsEl.appendChild(btn);
+      });
+
+      btnPrev.disabled = (idx === 0);
+      btnNext.disabled = (answers[idx] === undefined);
+      btnNext.textContent = (idx === questions.length - 1) ? 'Finish →' : 'Next Question →';
+    }
+
+    function calcScore() {
+      let s = 0;
+      questions.forEach((q, i) => {
+        if (answers[i] === q.answer) s++;
+      });
+      return s;
+    }
+
+    function renderResults() {
+      const s = calcScore();
+      const total = questions.length;
+
+      // ring math
+      const circumference = 2 * Math.PI * 58; // r=58
+      scoreRing.style.strokeDasharray = `${circumference}`;
+      scoreRing.style.strokeDashoffset = `${circumference - (circumference * s) / total}`;
+
+      scoreBig.textContent = `${s}`;
+      scoreOutof.textContent = `OUT OF ${total}`;
+
+      scoreMsg.textContent =
+        (s === total) ? "Mastered it! Excellent understanding of Chapter 6."
+        : (s > total * 0.7) ? "Great job! You have a solid grasp of selection methods."
+        : "Keep studying! Review the bias–variance tradeoff and shrinkage logic.";
+    }
+
+    function renderReview() {
+      reviewList.innerHTML = '';
+      const s = calcScore();
+
+      questions.forEach((q, i) => {
+        const correct = answers[i] === q.answer;
+        const card = document.createElement('div');
+        card.className = "p-4 bg-slate-50 rounded-lg border border-slate-200";
+
+        card.innerHTML = `
+          <div class="flex items-start">
+            <div class="mt-1 mr-3 flex-shrink-0">
+              ${correct
+                ? '<span class="inline-flex w-5 h-5 items-center justify-center text-green-700">✓</span>'
+                : '<span class="inline-flex w-5 h-5 items-center justify-center text-red-700">✗</span>'}
+            </div>
+            <div>
+              <p class="font-bold text-slate-800 mb-1">${i + 1}. ${q.question}</p>
+              <p class="text-sm text-green-700 font-medium">Correct Answer: ${q.options[q.answer]}</p>
+              <p class="text-sm text-slate-500 mt-2 italic">${q.explanation}</p>
+            </div>
+          </div>
+        `;
+        reviewList.appendChild(card);
+      });
+    }
+
+    // Wiring
+    btnStart.onclick = () => { idx = 0; answers = {}; show('quiz'); renderQuestion(); };
+    btnPrev.onclick = () => { if (idx > 0) { idx--; renderQuestion(); } };
+    btnNext.onclick = () => {
+      if (idx < questions.length - 1) {
+        idx++;
+        renderQuestion();
+      } else {
+        show('results');
+        renderResults();
+      }
+    };
+
+    btnReview.onclick = () => { show('review'); renderReview(); };
+    btnBackResults.onclick = () => { show('results'); renderResults(); };
+    btnFinish.onclick = () => { show('results'); renderResults(); };
+    btnRetake.onclick = () => { idx = 0; answers = {}; show('welcome'); };
+
+    // default
+    show('welcome');
+  </script>
+</body>
+</html>
+
