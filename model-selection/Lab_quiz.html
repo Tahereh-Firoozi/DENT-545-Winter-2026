@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Model Selection — Written Quiz</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; background: #fafafa; }
+    .container { max-width: 900px; margin: 0 auto; }
+    .card { background: white; border: 1px solid #ddd; border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+    h1 { margin: 0 0 8px 0; }
+    .muted { color: #555; margin-top: 0; }
+    label { font-weight: 700; display: block; margin-bottom: 6px; }
+    input[type="text"] { width: 320px; padding: 8px; border-radius: 8px; border: 1px solid #ccc; }
+    textarea {
+      width: 100%;
+      min-height: 140px; /* enough writing space */
+      resize: vertical;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    .qtitle { font-weight: 800; margin: 0 0 8px 0; }
+    .hint { color: #666; font-size: 13px; margin: 8px 0 0 0; }
+    .row { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+    .error { color: #b00020; font-weight: 700; margin-top: 8px; }
+    button {
+      background: #1a73e8;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    button:disabled { background: #8ab4f8; cursor: not-allowed; }
+    .success { color: #0b7a0b; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <div class="card">
+      <h1>Model Selection — Written Quiz</h1>
+      <p class="muted">
+        Enter your UAlberta CCID and answer all questions. Use complete sentences.
+      </p>
+
+      <div class="row">
+        <div>
+          <label for="ccid">UAlberta CCID (required)</label>
+          <input id="ccid" type="text" placeholder="e.g., smith1" />
+          <div id="ccidError" class="error"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- QUESTIONS -->
+    <div class="card">
+      <p class="qtitle">Q1. Best Ridge C and meaning</p>
+      <label for="q1">What was the best C selected for Ridge (L2)? What does this imply about regularization strength?</label>
+      <textarea id="q1" placeholder="Write your answer here..."></textarea>
+      <p class="hint">Tip: smaller C = stronger regularization.</p>
+    </div>
+
+    <div class="card">
+      <p class="qtitle">Q2. Best Lasso C and comparison</p>
+      <label for="q2">What was the best C selected for Lasso (L1)? Is regularization stronger or weaker than Ridge?</label>
+      <textarea id="q2" placeholder="Write your answer here..."></textarea>
+    </div>
+
+    <div class="card">
+      <p class="qtitle">Q3. CV comparison</p>
+      <label for="q3">Which model had higher cross-validated AUC (Ridge or Lasso)? Provide the approximate AUC values.</label>
+      <textarea id="q3" placeholder="Write your answer here..."></textarea>
+    </div>
+
+    <div class="card">
+      <p class="qtitle">Q4. Holdout comparison</p>
+      <label for="q4">Which model performed better on the holdout test set? Provide the holdout accuracy (and AUC if you have it).</label>
+      <textarea id="q4" placeholder="Write your answer here..."></textarea>
+    </div>
+
+    <div class="card">
+      <p class="qtitle">Q5. Why CV vs holdout can differ</p>
+      <label for="q5">Why might a model perform slightly better in cross-validation but worse on the holdout set?</label>
+      <textarea id="q5" placeholder="Write your answer here..."></textarea>
+      <p class="hint">Consider sampling variability, fold randomness, variance, etc.</p>
+    </div>
+
+    <div class="card">
+      <p class="qtitle">Q6. Bootstrap stability</p>
+      <label for="q6">Which model appears more stable according to bootstrap results? Explain using the mean and standard deviation.</label>
+      <textarea id="q6" placeholder="Write your answer here..."></textarea>
+    </div>
+
+    <div class="card">
+      <p class="qtitle">Q7. Purpose of bootstrap</p>
+      <label for="q7">What is the purpose of bootstrap in this exercise?</label>
+      <textarea id="q7" placeholder="Write your answer here..."></textarea>
+    </div>
+
+    <div class="card">
+      <p class="qtitle">Q8. Lasso feature selection check</p>
+      <label for="q8">Did Lasso perform meaningful feature selection? Support your answer using the number of non-zero coefficients.</label>
+      <textarea id="q8" placeholder="Write your answer here..."></textarea>
+    </div>
+
+    <div class="card">
+      <p class="qtitle">Q9. Correlated predictors</p>
+      <label for="q9">Which method is more appropriate when predictors are highly correlated? Why?</label>
+      <textarea id="q9" placeholder="Write your answer here..."></textarea>
+    </div>
+
+    <div class="card">
+      <p class="qtitle">Q10. Deployment decision</p>
+      <label for="q10">Based on all results (CV, holdout, bootstrap, sparsity), which model would you deploy and why?</label>
+      <textarea id="q10" placeholder="Write your answer here..."></textarea>
+      <p class="hint">A strong answer references the actual numbers and your goal (prediction vs interpretability vs stability).</p>
+    </div>
+
+    <!-- SUBMIT -->
+    <div class="card">
+      <button id="submitBtn" onclick="submitQuiz()">Submit</button>
+      <span id="status" style="margin-left:12px;"></span>
+      <div id="submitError" class="error"></div>
+    </div>
+
+  </div>
+
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbz7oxU1A2xUpB3ZFbhMOLbC7KKybDvxUGeZCnxFUAJX6ty-29jrbgDDA74F6pnX5DfM/exec";
+    const QUIZ_ID = "Model Selection (Written)";
+
+    function validateCCID() {
+      const ccidEl = document.getElementById("ccid");
+      const ccid = (ccidEl.value || "").trim().toLowerCase();
+      const ok = /^[a-z0-9]{2,16}$/.test(ccid);
+
+      document.getElementById("ccidError").textContent = ok ? "" : "Please enter a valid UAlberta CCID (letters/numbers only).";
+      if (!ok) ccidEl.focus();
+      return ok ? ccid : null;
+    }
+
+    function getResponses() {
+      return {
+        Q1: document.getElementById("q1").value.trim(),
+        Q2: document.getElementById("q2").value.trim(),
+        Q3: document.getElementById("q3").value.trim(),
+        Q4: document.getElementById("q4").value.trim(),
+        Q5: document.getElementById("q5").value.trim(),
+        Q6: document.getElementById("q6").value.trim(),
+        Q7: document.getElementById("q7").value.trim(),
+        Q8: document.getElementById("q8").value.trim(),
+        Q9: document.getElementById("q9").value.trim(),
+        Q10: document.getElementById("q10").value.trim(),
+      };
+    }
+
+    async function submitQuiz() {
+      const ccid = validateCCID();
+      if (!ccid) return;
+
+      const submitBtn = document.getElementById("submitBtn");
+      const status = document.getElementById("status");
+      const submitError = document.getElementById("submitError");
+
+      submitError.textContent = "";
+      status.textContent = "Submitting...";
+      submitBtn.disabled = true;
+
+      const responses = getResponses();
+
+      // Optional: require non-empty answers
+      // If you want to enforce all answers:
+      // for (const [k,v] of Object.entries(responses)) { if (!v) { submitError.textContent = `Please answer ${k}.`; submitBtn.disabled=false; status.textContent=""; return; } }
+
+      const payload = {
+        quiz_id: QUIZ_ID,
+        student_id: ccid,
+        answers: responses
+      };
+
+      try {
+        // no-cors allows sending from GitHub Pages without CORS headers
+        await fetch(API_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        status.textContent = "";
+        submitBtn.disabled = false;
+        document.getElementById("status").className = "success";
+        document.getElementById("status").textContent = "Submitted! Thank you.";
+
+      } catch (err) {
+        submitBtn.disabled = false;
+        status.textContent = "";
+        submitError.textContent = "Submission failed. Please try again, or check your internet connection.";
+        console.error(err);
+      }
+    }
+  </script>
+</body>
+</html>
